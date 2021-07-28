@@ -1,6 +1,7 @@
 */tmp/*
+tmp/
 config/*
-!config/example
+!config/example.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -11,6 +12,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+.idea/
 .Python
 build/
 develop-eggs/
