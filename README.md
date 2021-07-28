@@ -3,10 +3,15 @@
 This tool helps to automatically deploy stuff from Github to a server. \
 This simplifies the deployment of configuration and application updates.
 
-## Requirements
+## Usage
 
-none so far :)
+Using an executable from releases:
 
-## Installation
+1. Create a token under https://github.com/settings/tokens/new with scope: "repo"
+2. Create a config file f.E. config/default.json (see config/example.json)
+3. Run:
 
-- Create a token under https://github.com/settings/tokens/new with scope: "repo" - it is strongly advised to use a dedicated github account with read-only rights.
+./git-auto-deploy /path/to/config.json
+
+
+
