@@ -105,7 +105,7 @@ class Git:
 
     def updateAssets(self):
         releases = self.getJSON(self.baseURL + "/releases")
-        releasesfiltered = list(filter(lambda x:x["prerelease"] == False, releases))
+        releasesfiltered = list(filter(lambda x:not x["prerelease"] and not x["draft"], releases))
         releasesfiltered = list(filter(lambda x: self.searchName(x["name"], self.releasePattern), releasesfiltered))
         releasesfiltered.sort(key=self.getPublishedAt, reverse=True)
 
