@@ -17,7 +17,8 @@ Using an executable from releases:
 3. Install App to required Repositories (in menu: Install App)
 4. Create Private Key and save *.pem to your computer (in menu: General)
 5. Create a config file f.E. config/default.json (see config/example.json)
-6. Run:
+6. To use Sentry add a file called sentry.txt at the same place as config file (f.E. config/sentry.txt)
+7. Run:
 
 ./git-auto-deploy /path/to/config.json
 
@@ -25,7 +26,8 @@ Using an executable from releases:
 
 1. Create a token under https://github.com/settings/tokens/new with scope: "repo"
 2. Create a config file f.E. config/default.json (see config/example.json)
-3. Run:
+3. To use Sentry add a file called sentry.txt at the same place as config file (f.E. config/sentry.txt)
+4. Run:
 
 ./git-auto-deploy /path/to/config.json
 
@@ -36,7 +38,7 @@ The following lines of code helps to install git-auto-deploy as a cronjob (adapt
 ```bash
 sudo mkdir /opt/git-auto-deploy
 cd /opt/git-auto-deploy
-sudo wget https://github.com/macherstube/git-auto-deploy/releases/download/v0.0.10/git-auto-deploy_linux
+sudo wget https://github.com/macherstube/git-auto-deploy/releases/download/v0.0.11/git-auto-deploy_linux -O git-auto-deploy_linux
 sudo chmod 770 git-auto-deploy_linux
 echo $'#!/bin/bash\n\n' | sudo tee postscript.sh > /dev/null
 sudo chmod 770 postscript.sh

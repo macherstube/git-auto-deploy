@@ -4,7 +4,7 @@
 ##########################################################
 # title:  git_api.py
 # author: Josias Bruderer
-# date:   28.07.2021
+# date:   29.07.2021
 # desc:   updates files from github releases
 ##########################################################
 
@@ -19,6 +19,7 @@ import subprocess
 from jwcrypto import jwt
 from jwcrypto import jwk
 import time
+
 
 class Git:
     def __init__(self, config):
@@ -62,7 +63,6 @@ class Git:
                 jwtoken.make_signed_token(private_key)
                 self.gitAuth = "Bearer " + jwtoken.serialize()
 
-
     def getJSON(self, url):
         try:
             r = requests.get(url,
@@ -79,7 +79,6 @@ class Git:
         except:
             print("Unexpected error: ", sys.exc_info()[0])
             raise
-
 
     def getFILE(self, url):
         try:
