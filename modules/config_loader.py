@@ -35,8 +35,13 @@ class Cfg:
             if "REPOSITORY" not in self.config or len(self.config["REPOSITORY"]) == 0:
                 raise ValueError("Config file invalid: REPOSITORY not found or empty in" + str(path.absolute()))
 
-            if "AUTHTOKEN" not in self.config or len(self.config["AUTHTOKEN"]) == 0:
-                raise ValueError("Config file invalid: AUTHTOKEN not found or empty in" + str(path.absolute()))
+            if ("AUTHTOKEN" not in self.config or len(self.config["AUTHTOKEN"]) == 0) and \
+                    ("PRIVATEKEY" not in self.config or len(self.config["PRIVATEKEY"]) == 0):
+                raise ValueError("Config file invalid: AUTHTOKEN or PRIVATEKEY not found or empty in" + str(path.absolute()))
+
+            if "PRIVATEKEY" in self.config and len(self.config["PRIVATEKEY"]) > 0 and \
+                    ("APPID" not in self.config or len(str(self.config["APPID"])) < 2):
+                raise ValueError("Config file invalid: APPID required for PRIVATEKEY authentication" + str(path.absolute()))
 
         except:
             print("Unexpected error: ", sys.exc_info()[0])

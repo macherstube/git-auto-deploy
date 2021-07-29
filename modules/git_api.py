@@ -16,31 +16,66 @@ import warnings
 import re
 import zipfile
 import subprocess
-
+from jwcrypto import jwt
+from jwcrypto import jwk
+import time
 
 class Git:
     def __init__(self, config):
         self.config = config
         self.baseURL = "https://api.github.com/repos/" + self.config["USERNAME"] + "/" + self.config["REPOSITORY"]
         self.releasePattern = re.compile(self.config["ASSETREGEX"])
+        self.gitAuth = ""
+        self.gitAuthExpire = 0
         self.init()
 
     def init(self):
-        print(self.baseURL)
+        self.getAuth()
+
+    def getAuth(self):
+        if self.gitAuth == "" or time.time() > self.gitAuthExpire:
+            if "AUTHTOKEN" in self.config and len(self.config["AUTHTOKEN"]) > 0:
+                self.gitAuth = "token " + self.config["AUTHTOKEN"]
+                self.gitAuthExpire = time.time() + 3600
+            if "PRIVATEKEY" in self.config and len(self.config["PRIVATEKEY"]) > 0 \
+                    and "APPID" in self.config and len(str(self.config["APPID"])) > 1:
+                pempath = Path(self.config["PRIVATEKEY"])
+
+                if not pempath.is_file():
+                    raise ValueError("Private Key not found in: " + str(pempath.absolute()))
+
+                private_pem = pempath.read_bytes()
+                private_key = jwk.JWK.from_pem(private_pem)
+
+                self.gitAuthExpire = int(time.time()) + 270
+
+                payload = {
+                    # issued at time, 30 seconds in the past to allow for clock drift
+                    "iat": int(time.time()) - 30,
+                    # JWT expiration time (5 minute maximum)
+                    "exp": self.gitAuthExpire,
+                    # GitHub App's identifier
+                    "iss": self.config["APPID"] + 30
+                }
+
+                jwtoken = jwt.JWT(header={"alg": "RS256"}, claims=payload)
+                jwtoken.make_signed_token(private_key)
+                self.gitAuth = "Bearer " + jwtoken.serialize()
+
 
     def getJSON(self, url):
-        print(url)
         try:
             r = requests.get(url,
                              allow_redirects=True,
                              headers={"Accept":"application/vnd.github.v3+json",
-                                      "Authorization": "token " + self.config["AUTHTOKEN"]})
+                                      "Authorization": self.gitAuth})
             if r.status_code == 200:
                 try:
                     return json.loads(r.content)
                 except ValueError as err:
                     return False
-            return r
+            else:
+                raise ValueError("Status Code not 200: " + str(r.status_code) + " " + r.text)
         except:
             print("Unexpected error: ", sys.exc_info()[0])
             raise
@@ -51,9 +86,11 @@ class Git:
             r = requests.get(url,
                              allow_redirects=True,
                              headers={"Accept": "application/octet-stream",
-                                      "Authorization": "token " + self.config["AUTHTOKEN"]})
+                                      "Authorization": self.gitAuth})
             if r.status_code == 200:
                 return r.content
+            else:
+                raise ValueError("Status Code not 200: " + str(r.status_code) + " " + r.text)
         except:
             print("Unexpected error: ", sys.exc_info()[0])
             raise
