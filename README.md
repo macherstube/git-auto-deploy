@@ -38,7 +38,7 @@ The following lines of code helps to install git-auto-deploy as a cronjob (adapt
 ```bash
 sudo mkdir /opt/git-auto-deploy
 cd /opt/git-auto-deploy
-sudo wget https://github.com/macherstube/git-auto-deploy/releases/download/v0.0.11/git-auto-deploy_linux -O git-auto-deploy_linux
+sudo wget https://github.com/macherstube/git-auto-deploy/releases/download/v0.0.12/git-auto-deploy_linux -O git-auto-deploy_linux
 sudo chmod 770 git-auto-deploy_linux
 echo $'#!/bin/bash\n\n' | sudo tee postscript.sh > /dev/null
 sudo chmod 770 postscript.sh

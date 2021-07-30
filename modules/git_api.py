@@ -4,7 +4,7 @@
 ##########################################################
 # title:  git_api.py
 # author: Josias Bruderer
-# date:   29.07.2021
+# date:   30.07.2021
 # desc:   updates files from github releases
 ##########################################################
 
@@ -19,6 +19,7 @@ import subprocess
 from jwcrypto import jwt
 from jwcrypto import jwk
 import time
+import datetime
 
 
 class Git:
@@ -54,14 +55,45 @@ class Git:
                     # issued at time, 30 seconds in the past to allow for clock drift
                     "iat": int(time.time()) - 30,
                     # JWT expiration time (5 minute maximum)
-                    "exp": self.gitAuthExpire,
+                    "exp": self.gitAuthExpire + 30,
                     # GitHub App's identifier
-                    "iss": self.config["APPID"] + 30
+                    "iss": self.config["APPID"]
                 }
 
                 jwtoken = jwt.JWT(header={"alg": "RS256"}, claims=payload)
                 jwtoken.make_signed_token(private_key)
-                self.gitAuth = "Bearer " + jwtoken.serialize()
+                self.gitAuth = "bearer " + jwtoken.serialize()
+
+                r = self.getJSON("https://api.github.com/app/installations")
+                installations = list(filter(lambda x:x["account"]["login"] == "chippmann", r))
+                if len(installations) == 0:
+                    raise ValueError("Authentication failure: no app installation suitable.")
+                installationsid = installations[0]["id"]
+                r = self.postJSON("https://api.github.com/app/installations/" + str(installationsid) + "/access_tokens")
+                if "token" in r and len(r["token"]) > 0:
+                    self.gitAuth = "token " + r["token"]
+                    self.gitAuthExpire = datetime.datetime.strptime(r["expires_at"], "%Y-%m-%dT%H:%M:%S%z")
+                else:
+                    raise ValueError("Something did not work with generating authentication token...")
+
+    def postJSON(self, url, d="", j=""):
+        try:
+            r = requests.post(url,
+                              data=d,
+                              json=j,
+                             allow_redirects=True,
+                             headers={"Accept":"application/vnd.github.v3+json",
+                                      "Authorization": self.gitAuth})
+            if 200 <= r.status_code < 300:
+                try:
+                    return json.loads(r.content)
+                except ValueError as err:
+                    return False
+            else:
+                raise ValueError("Status Code not 2XX for url " + url + " : " + str(r.status_code) + " " + r.text)
+        except:
+            print("Unexpected error: ", sys.exc_info()[0])
+            raise
 
     def getJSON(self, url):
         try:
@@ -69,13 +101,13 @@ class Git:
                              allow_redirects=True,
                              headers={"Accept":"application/vnd.github.v3+json",
                                       "Authorization": self.gitAuth})
-            if r.status_code == 200:
+            if 200 <= r.status_code < 300:
                 try:
                     return json.loads(r.content)
                 except ValueError as err:
                     return False
             else:
-                raise ValueError("Status Code not 200: " + str(r.status_code) + " " + r.text)
+                raise ValueError("Status Code not 2XX for url " + url + " : " + str(r.status_code) + " " + r.text)
         except:
             print("Unexpected error: ", sys.exc_info()[0])
             raise
