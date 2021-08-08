@@ -20,6 +20,10 @@ from jwcrypto import jwt
 from jwcrypto import jwk
 import time
 import datetime
+import string
+import random
+import os
+import shutil
 
 
 class Git:
@@ -65,7 +69,7 @@ class Git:
                 self.gitAuth = "bearer " + jwtoken.serialize()
 
                 r = self.getJSON("https://api.github.com/app/installations")
-                installations = list(filter(lambda x:x["account"]["login"] == "chippmann", r))
+                installations = list(filter(lambda x: x["account"]["login"] == "chippmann", r))
                 if len(installations) == 0:
                     raise ValueError("Authentication failure: no app installation suitable.")
                 installationsid = installations[0]["id"]
@@ -81,9 +85,9 @@ class Git:
             r = requests.post(url,
                               data=d,
                               json=j,
-                             allow_redirects=True,
-                             headers={"Accept":"application/vnd.github.v3+json",
-                                      "Authorization": self.gitAuth})
+                              allow_redirects=True,
+                              headers={"Accept": "application/vnd.github.v3+json",
+                                       "Authorization": self.gitAuth})
             if 200 <= r.status_code < 300:
                 try:
                     return json.loads(r.content)
@@ -99,7 +103,7 @@ class Git:
         try:
             r = requests.get(url,
                              allow_redirects=True,
-                             headers={"Accept":"application/vnd.github.v3+json",
+                             headers={"Accept": "application/vnd.github.v3+json",
                                       "Authorization": self.gitAuth})
             if 200 <= r.status_code < 300:
                 try:
@@ -136,7 +140,7 @@ class Git:
 
     def updateAssets(self):
         releases = self.getJSON(self.baseURL + "/releases")
-        releasesfiltered = list(filter(lambda x:not x["prerelease"] and not x["draft"], releases))
+        releasesfiltered = list(filter(lambda x: not x["prerelease"] and not x["draft"], releases))
         releasesfiltered = list(filter(lambda x: self.searchName(x["name"], self.releasePattern), releasesfiltered))
         releasesfiltered.sort(key=self.getPublishedAt, reverse=True)
 
@@ -150,20 +154,39 @@ class Git:
                              "Check: " + releasesfiltered[0]["html_url"])
 
         destinationdir = Path(self.config["DESTINATIONDIR"])
+        randomstr = "tmp_" + "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
+        tmpdir = Path(destinationdir, randomstr)
         if not destinationdir.is_dir():
             destinationdir.mkdir(parents=True, exist_ok=True)
+
+        if not tmpdir.is_dir():
+            tmpdir.mkdir(parents=True, exist_ok=True)
+
+        for f in os.listdir(destinationdir):
+            if not f == randomstr:
+                os.rename(Path(destinationdir, f), Path(tmpdir, f))
 
         postscriptrun = False
 
         for a in assets:
-            destination = Path(self.config["DESTINATIONDIR"] + "/" + a["name"])
-            destinationnodeid = Path(self.config["DESTINATIONDIR"] + "/._" + a["name"] + ".node_id")
+            destination = Path(destinationdir, a["name"])
+            destinationtmp = Path(tmpdir, a["name"])
+            destinationnodeid = Path(destinationdir, str("._" + a["name"] + ".node_id"))
+            destinationnodeidtmp = Path(tmpdir, str("._" + a["name"] + ".node_id"))
 
-            if destination.is_file() and \
-                    destination.stat().st_size == a["size"] and \
-                    destinationnodeid.is_file() and \
-                destinationnodeid.read_text() == a["node_id"]:
-                warnings.warn("file with same size and node_id exists and will be skipped: " + str(destination.absolute()))
+            if destinationtmp.is_file() and \
+                    destinationtmp.stat().st_size == a["size"] and \
+                    destinationnodeidtmp.is_file() and \
+                    destinationnodeidtmp.read_text() == a["node_id"]:
+                warnings.warn("file with same size and node_id exists and will be skipped: " \
+                              + str(destination.absolute()))
+                os.rename(destinationtmp, destination)
+                os.rename(destinationnodeidtmp, destinationnodeid)
+                if self.config["UNZIPDIR"] != "" \
+                        and Path(self.config["UNZIPDIR"]) == destinationdir \
+                        and zipfile.is_zipfile(str(destination)):
+                    with zipfile.ZipFile(str(destination), 'r') as zip_ref:
+                        zip_ref.extractall(self.config["UNZIPDIR"])
             else:
                 asset = self.getFILE(a["url"])
                 if len(asset) > 0:
@@ -179,5 +202,7 @@ class Git:
         if postscriptrun:
             if self.config["POSTSCRIPT"] != "":
                 rc = subprocess.call(self.config["POSTSCRIPT"])
+
+        shutil.rmtree(tmpdir)
 
         return True

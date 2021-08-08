@@ -31,7 +31,7 @@ Using an executable from releases:
 
 ./git-auto-deploy /path/to/config.json
 
-## install as a service
+## Install as a service
 
 The following lines of code helps to install git-auto-deploy as a cronjob (adapt that for windows of osx)
 
